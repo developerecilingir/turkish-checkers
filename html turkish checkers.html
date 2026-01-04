@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turk Damasi - AI'ya Karsi</title>
+<style>
+* {margin: 0;padding: 0;box-sizing: border-box;}
+body {font-family: Arial, sans-serif;background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);min-height: 100vh;display: flex;justify-content: center;align-items: center;padding: 20px;}
+.container {background: white;border-radius: 20px;padding: 30px;box-shadow: 0 20px 60px rgba(0,0,0,0.3);max-width: 800px;}
+h1 {text-align: center;color: #333;margin-bottom: 10px;font-size: 2em;}
+.subtitle {text-align: center;color: #e74c3c;font-weight: bold;margin-bottom: 20px;}
+.info-bar {display: flex;justify-content: space-between;margin-bottom: 20px;padding: 15px;background: #f8f9fa;border-radius: 10px;}
+.player-info {font-size: 1.1em;font-weight: bold;}
+.current-turn {color: #2ecc71;}
+#board {display: grid;grid-template-columns: repeat(8, 80px);grid-template-rows: repeat(8, 80px);gap: 0;margin: 0 auto;border: 4px solid #333;box-shadow: 0 5px 15px rgba(0,0,0,0.2);}
+.square {width: 80px;height: 80px;display: flex;justify-content: center;align-items: center;cursor: pointer;transition: all 0.2s;position: relative;}
+.square.light {background: #f0d9b5;}
+.square.dark {background: #b58863;}
+.square.selected {background: #7cb342 !important;box-shadow: inset 0 0 20px rgba(0,0,0,0.3);}
+.square.valid-move {background: #81c784 !important;}
+.square.valid-move::after {content: '';width: 20px;height: 20px;background: rgba(46, 204, 113, 0.6);border-radius: 50%;position: absolute;}
+.piece {width: 60px;height: 60px;border-radius: 50%;display: flex;justify-content: center;align-items: center;font-size: 30px;transition: transform 0.2s;pointer-events: none;}
+.square:hover .piece {transform: scale(1.1);}
+.red-piece {background: radial-gradient(circle at 30% 30%, #ff6b6b, #c92a2a);border: 3px solid #8b0000;box-shadow: 0 4px 8px rgba(0,0,0,0.3);}
+.black-piece {background: radial-gradient(circle at 30% 30%, #4a4a4a, #1a1a1a);border: 3px solid #000;box-shadow: 0 4px 8px rgba(0,0,0,0.3);}
+.red-king {background: radial-gradient(circle at 30% 30%, #ffd700, #ff8c00);border: 4px solid #8b0000;box-shadow: 0 4px 12px rgba(255,215,0,0.5);}
+.black-king {background: radial-gradient(circle at 30% 30%, #4a4a4a, #1a1a1a);border: 4px solid #ffd700;box-shadow: 0 4px 12px rgba(255,215,0,0.3);}
+.king-symbol {color: #ffd700;font-size: 35px;text-shadow: 2px 2px 4px rgba(0,0,0,0.5);}
+.message {text-align: center;margin-top: 20px;padding: 15px;border-radius: 10px;font-size: 1.2em;font-weight: bold;display: none;}
+.message.show {display: block;}
+.message.warning {background: #fff3cd;color: #856404;}
+.message.success {background: #d4edda;color: #155724;}
+.message.danger {background: #f8d7da;color: #721c24;}
+.difficulty-selector {text-align: center;margin-bottom: 20px;}
+.difficulty-selector label {font-weight: bold;margin-right: 10px;}
+.difficulty-selector select {padding: 8px 15px;border-radius: 5px;border: 2px solid #667eea;font-size: 1em;cursor: pointer;}
+#secretInput {margin-left: 10px;padding: 8px;border: 2px solid #667eea;border-radius: 5px;}
+button {display: block;margin: 20px auto 0;padding: 12px 30px;background: #667eea;color: white;border: none;border-radius: 8px;font-size: 1.1em;cursor: pointer;transition: all 0.3s;}
+button:hover {background: #764ba2;transform: scale(1.05);}
+.easter-egg-modal {position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0,0,0,0.8);display: none;justify-content: center;align-items: center;z-index: 1000;}
+.easter-egg-content {background: white;padding: 40px;border-radius: 20px;max-width: 600px;max-height: 80vh;overflow-y: auto;text-align: center;box-shadow: 0 20px 60px rgba(0,0,0,0.5);}
+.easter-egg-content pre {text-align: left;background: #f4f4f4;padding: 20px;border-radius: 10px;overflow-x: auto;}
+.easter-egg-content img {max-width: 100%;height: auto;border-radius: 10px;margin: 20px 0;}
+.easter-egg-content h2 {color: #667eea;margin-bottom: 15px;}
+.easter-egg-content p {font-size: 1.1em;line-height: 1.6;color: #333;}
+.close-modal {margin-top: 20px;padding: 10px 30px;background: #667eea;color: white;border: none;border-radius: 8px;cursor: pointer;font-size: 1em;}
+.close-modal:hover {background: #764ba2;}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>TURK DAMASI</h1>
+<p class="subtitle">TAS YEME ZORUNLUDUR!</p>
+<div class="difficulty-selector">
+<label for="difficulty">Zorluk Seviyesi:</label>
+<select id="difficulty">
+<option value="1">Kolay - Rastgele</option>
+<option value="2">Orta - Akilli Yeme</option>
+<option value="3" selected>Zor - Stratejik AI</option>
+</select>
+<input type="text" id="secretInput" placeholder="Gizli kod...">
+</div>
+<div class="info-bar">
+<div class="player-info">
+<span style="color: #c92a2a;">KIRMIZI - SIZ</span>
+<div id="playerPieces">Tas: 16</div>
+</div>
+<div class="current-turn" id="turnInfo">SIZIN SIRANIZ</div>
+<div class="player-info">
+<span style="color: #1a1a1a;">SIYAH - AI</span>
+<div id="aiPieces">Tas: 16</div>
+</div>
+</div>
+<div id="board"></div>
+<div id="message" class="message"></div>
+<button onclick="restartGame()">Yeni Oyun</button>
+</div>
+
+<!-- Gizli Kod Modal -->
+<div id="easterEggModal" class="easter-egg-modal" onclick="closeModal()">
+<div class="easter-egg-content" onclick="event.stopPropagation()">
+<div id="easterEggText"></div>
+<button class="close-modal" onclick="closeModal()">Kapat</button>
+</div>
+</div>
+
+<script>
+const EMPTY=0,RED=1,RED_KING=2,BLACK=-1,BLACK_KING=-2;
+let board=Array(8).fill().map(()=>Array(8).fill(EMPTY));
+let selectedSquare=null,validMoves=[],playerTurn=true,difficulty=3,wonOnHard=false;
+
+function initBoard(){
+  board=Array(8).fill().map(()=>Array(8).fill(EMPTY));
+  for(let j=0;j<8;j++){board[1][j]=RED;board[2][j]=RED;}
+  for(let j=0;j<8;j++){board[5][j]=BLACK;board[6][j]=BLACK;}
+  selectedSquare=null;validMoves=[];
+  playerTurn=true;
+  difficulty=parseInt(document.getElementById('difficulty').value);
+  wonOnHard=false;
+  renderBoard();updateInfo();showMessage('','');
+}
+
+function renderBoard(){
+  const boardDiv=document.getElementById('board');
+  boardDiv.innerHTML='';
+  for(let i=7;i>=0;i--){
+    for(let j=0;j<8;j++){
+      const square=document.createElement('div');
+      square.className='square '+((i+j)%2===0?'light':'dark');
+      square.dataset.row=i;
+      square.dataset.col=j;
+      if(selectedSquare&&selectedSquare.row===i&&selectedSquare.col===j){square.classList.add('selected');}
+      if(validMoves.some(m=>m.toRow===i&&m.toCol===j)){square.classList.add('valid-move');}
+      const piece=board[i][j];
+      if(piece!==EMPTY){
+        const pieceDiv=document.createElement('div');
+        pieceDiv.className='piece';
+        if(piece===RED)pieceDiv.classList.add('red-piece');
+        else if(piece===BLACK)pieceDiv.classList.add('black-piece');
+        else if(piece===RED_KING){pieceDiv.classList.add('red-king');pieceDiv.innerHTML='<span class="king-symbol">K</span>';}
+        else if(piece===BLACK_KING){pieceDiv.classList.add('black-king');pieceDiv.innerHTML='<span class="king-symbol">K</span>';}
+        square.appendChild(pieceDiv);
+      }
+      square.onclick=()=>handleSquareClick(i,j);
+      boardDiv.appendChild(square);
+    }
+  }
+}
+
+function handleSquareClick(row,col){
+  if(!playerTurn)return;
+  const piece=board[row][col];
+  if(validMoves.some(m=>m.toRow===row&&m.toCol===col)){
+    const move=validMoves.find(m=>m.toRow===row&&m.toCol===col);
+    makeMove(move);
+    selectedSquare=null;validMoves=[];
+    if(!checkGameOver()){playerTurn=false;updateInfo();setTimeout(()=>aiMove(),800);}
+    return;
+  }
+  if(piece>0){
+    selectedSquare={row,col};
+    validMoves=getValidMoves(row,col,RED);
+    const allCaptures=getAllCaptureMoves(RED);
+    if(allCaptures.length>0){validMoves=validMoves.filter(m=>m.captures&&m.captures.length>0);}
+    renderBoard();
+  }else{
+    selectedSquare=null;validMoves=[];renderBoard();
+  }
+}
+
+function getValidMoves(row,col,player){
+  const piece=board[row][col];
+  const moves=[];
+  const isKing=Math.abs(piece)===2;
+  const forward=player>0?1:-1;
+  const captures=getCaptureMoves(row,col,player,[],board);
+  moves.push(...captures);
+  if(captures.length===0){
+    if(isKing){
+      const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+      for(const[dr,dc]of dirs){
+        let nr=row+dr,nc=col+dc;
+        while(nr>=0&&nr<8&&nc>=0&&nc<8&&board[nr][nc]===EMPTY){
+          moves.push({fromRow:row,fromCol:col,toRow:nr,toCol:nc});
+          nr+=dr;nc+=dc;
+        }
+      }
+    }else{
+      if(row+forward>=0&&row+forward<8&&board[row+forward][col]===EMPTY)
+        moves.push({fromRow:row,fromCol:col,toRow:row+forward,toCol:col});
+      if(col-1>=0&&board[row][col-1]===EMPTY)
+        moves.push({fromRow:row,fromCol:col,toRow:row,toCol:col-1});
+      if(col+1<8&&board[row][col+1]===EMPTY)
+        moves.push({fromRow:row,fromCol:col,toRow:row,toCol:col+1});
+    }
+  }
+  return moves;
+}
+
+// ✅ Düzeltilmiş çoklu taş yeme fonksiyonu
+function getCaptureMoves(row,col,player,captured,tempBoard){
+  const piece=tempBoard[row][col];
+  const isKing=Math.abs(piece)===2;
+  const moves=[];
+  const forward=player>0?1:-1;
+  const dirs=isKing?[[1,0],[-1,0],[0,1],[0,-1]]:[[forward,0],[0,-1],[0,1]];
+
+  for(const[dr,dc]of dirs){
+    const mr=row+dr,mc=col+dc;
+    const jr=row+2*dr,jc=col+2*dc;
+    if(jr<0||jr>=8||jc<0||jc>=8)continue;
+    if(tempBoard[mr][mc]===EMPTY||tempBoard[jr][jc]!==EMPTY)continue;
+    if(tempBoard[mr][mc]*player>=0)continue;
+    if(captured.some(c=>c.row===mr&&c.col===mc))continue;
+
+    const newCaptured=[...captured,{row:mr,col:mc}];
+    const newBoard=tempBoard.map(r=>[...r]);
+    newBoard[row][col]=EMPTY;
+    newBoard[mr][mc]=EMPTY;
+    newBoard[jr][jc]=piece;
+
+    const furtherCaptures=getCaptureMoves(jr,jc,player,newCaptured,newBoard);
+    if(furtherCaptures.length===0){
+      moves.push({fromRow:row,fromCol:col,toRow:jr,toCol:jc,captures:newCaptured});
+    } else {
+      // 🔧 Zincirli hamlelerde taşın son konumunu da aktar
+      for(const fm of furtherCaptures){
+        moves.push({
+          fromRow:row,
+          fromCol:col,
+          toRow:fm.toRow,
+          toCol:fm.toCol,
+          captures:fm.captures
+        });
+      }
+    }
+  }
+  return moves;
+}
+
+function getAllCaptureMoves(player){
+  const captures=[];
+  for(let i=0;i<8;i++){
+    for(let j=0;j<8;j++){
+      if(board[i][j]*player>0){
+        const pieceMoves=getCaptureMoves(i,j,player,[],board);
+        captures.push(...pieceMoves);
+      }
+    }
+  }
+  if(captures.length>0){
+    const maxCaptures=Math.max(...captures.map(m=>m.captures.length));
+    return captures.filter(m=>m.captures.length===maxCaptures);
+  }
+  return captures;
+}
+
+function getAllMoves(player){
+  const captures=getAllCaptureMoves(player);
+  if(captures.length>0){
+    if(player>0)showMessage('TAS YEME ZORUNLU!','warning');
+    return captures;
+  }
+  const moves=[];
+  for(let i=0;i<8;i++){
+    for(let j=0;j<8;j++){
+      if(board[i][j]*player>0){
+        moves.push(...getValidMoves(i,j,player));
+      }
+    }
+  }
+  return moves;
+}
+
+function makeMove(move){
+  const piece=board[move.fromRow][move.fromCol];
+  board[move.fromRow][move.fromCol]=EMPTY;
+  board[move.toRow][move.toCol]=piece;
+  if(move.captures){for(const cap of move.captures){board[cap.row][cap.col]=EMPTY;}}
+  if(piece===RED&&move.toRow===7)board[move.toRow][move.toCol]=RED_KING;
+  if(piece===BLACK&&move.toRow===0)board[move.toRow][move.toCol]=BLACK_KING;
+  updateInfo();renderBoard();
+}
+
+function aiMove(){
+  const moves=getAllMoves(BLACK);
+  if(moves.length===0){showMessage('KAZANDINIZ!','success');return;}
+  let move;
+  if(difficulty===1)move=moves[Math.floor(Math.random()*moves.length)];
+  else if(difficulty===2){
+    const captureMoves=moves.filter(m=>m.captures&&m.captures.length>0);
+    if(captureMoves.length>0)move=captureMoves[Math.floor(Math.random()*captureMoves.length)];
+    else move=moves[Math.floor(Math.random()*moves.length)];
+  } else move=getBestMove(moves);
+
+  makeMove(move);
+  playerTurn=true;updateInfo();checkGameOver();
+}
+
+function getBestMove(moves){
+  let bestScore=-Infinity,bestMove=moves[0];
+  for(const move of moves){
+    const score=evaluateMove(move);
+    if(score>bestScore){bestScore=score;bestMove=move;}
+  }
+  return bestMove;
+}
+
+function evaluateMove(move){
+  let score=0;
+  if(move.captures)score+=move.captures.length*100;
+  if(board[move.fromRow][move.fromCol]===BLACK&&move.toRow===0)score+=50;
+  score+=(7-move.toRow)*5;
+  return score+Math.random()*10;
+}
+
+function countPieces(player){
+  let count=0;
+  for(let i=0;i<8;i++)for(let j=0;j<8;j++)if(board[i][j]*player>0)count++;
+  return count;
+}
+
+function updateInfo(){
+  document.getElementById('playerPieces').textContent='Tas: '+countPieces(RED);
+  document.getElementById('aiPieces').textContent='Tas: '+countPieces(BLACK);
+  document.getElementById('turnInfo').textContent=playerTurn?'SIZIN SIRANIZ':'AI DUSUNUYOR...';
+}
+
+function checkGameOver(){
+  const playerMoves=getAllMoves(RED);
+  const aiMoves=getAllMoves(BLACK);
+  if(playerMoves.length===0){showMessage('AI KAZANDI!','danger');playerTurn=false;return true;}
+  if(aiMoves.length===0){
+    if(difficulty===3){
+      wonOnHard=true;
+      showMessage('KAZANDINIZ! 🏆 ZOR ZORLUKTA KAZANDIN! 💡 Gizli kod kutusuna "ecilingirkod" yaz','success');
+    } else showMessage('KAZANDINIZ!','success');
+    playerTurn=false;return true;
+  }
+  if(countPieces(RED)===1&&countPieces(BLACK)===1){showMessage('BERABERE!','warning');playerTurn=false;return true;}
+  return false;
+}
+
+function showMessage(text,type){
+  const msgDiv=document.getElementById('message');
+  msgDiv.textContent=text;
+  msgDiv.className='message '+type;
+  if(text)msgDiv.classList.add('show');
+}
+
+function restartGame(){initBoard();}
+
+// --- Easter Eggs ---
+function checkEasterEgg(){
+  const input=document.getElementById('secretInput').value.toLowerCase();
+  if(!input)return;
+  const eggs={
+    'ecilingir':'<h2>🎮 Merhaba ben EFE !</h2><p>Bu oyunun yapımcısıDG QDAZC<</p>',
+    'ecilingirstar':'<h2>Uzun zaman önce bir galakside bir dama ustası yaşardı</h2><p>İsmi .... idi(yoksa o sen misin).</p>',
+    'ecilingirkod':'<h2>🎯 GİZLİ KODLAR</h2><p><strong>ecilingir, ecilingirstar</strong></p>'
+  };
+  if(eggs[input])showEasterEgg(eggs[input]);
+  document.getElementById('secretInput').value='';
+}
+
+function showEasterEgg(text){
+  document.getElementById('easterEggText').innerHTML=text;
+  document.getElementById('easterEggModal').style.display='flex';
+}
+function closeModal(){document.getElementById('easterEggModal').style.display='none';}
+document.getElementById('secretInput').addEventListener('keypress',e=>{if(e.key==='Enter')checkEasterEgg();});
+initBoard();
+</script>
+</body>
+</html>
