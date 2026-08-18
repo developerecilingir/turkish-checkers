@@ -77,7 +77,6 @@ button:hover {background: #764ba2;transform: scale(1.05);}
 <button onclick="restartGame()">Yeni Oyun</button>
 </div>
 
-<!-- Gizli Kod Modal -->
 <div id="easterEggModal" class="easter-egg-modal" onclick="closeModal()">
 <div class="easter-egg-content" onclick="event.stopPropagation()">
 <div id="easterEggText"></div>
@@ -178,7 +177,6 @@ function getValidMoves(row,col,player){
   return moves;
 }
 
-// ✅ Düzeltilmiş çoklu taş yeme fonksiyonu
 function getCaptureMoves(row,col,player,captured,tempBoard){
   const piece=tempBoard[row][col];
   const isKing=Math.abs(piece)===2;
@@ -204,7 +202,6 @@ function getCaptureMoves(row,col,player,captured,tempBoard){
     if(furtherCaptures.length===0){
       moves.push({fromRow:row,fromCol:col,toRow:jr,toCol:jc,captures:newCaptured});
     } else {
-      // 🔧 Zincirli hamlelerde taşın son konumunu da aktar
       for(const fm of furtherCaptures){
         moves.push({
           fromRow:row,
@@ -331,7 +328,6 @@ function showMessage(text,type){
 
 function restartGame(){initBoard();}
 
-// --- Easter Eggs ---
 function checkEasterEgg(){
   const input=document.getElementById('secretInput').value.toLowerCase();
   if(!input)return;
